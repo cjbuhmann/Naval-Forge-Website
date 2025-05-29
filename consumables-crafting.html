@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Consumables Crafting Calculator</title>
+  <style>
+    body { background: #111; color: #eee; font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+    nav { background:#222; color:#eee; padding:10px; text-align: center; }
+    nav a { color:#eee; margin: 0 15px; text-decoration: none; }
+    .grid { display: flex; gap: 30px; align-items: flex-start; max-width: 1080px; margin: auto; }
+    .left-panel { width: 35%; }
+    .right-panel { width: 65%; }
+    select, input { width: 100%; padding: 8px; margin-bottom: 15px; background: #222; color: #eee; border: 1px solid #555; }
+    .cost-inputs input { width: 60px; }
+    ul { list-style-type: square; margin-left: 20px; }
+    .tree ul { margin-left: 20px; border-left: 1px dashed #555; padding-left: 10px; }
+    .section { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+<nav>
+  <a href="index.html">Home</a>
+  <a href="ships.html">Ship Index</a>
+  <a href="crafting.html">Crafting</a>
+</nav>
+
+<h1 style="text-align: center;">Consumables Crafting Calculator</h1>
+<div class="grid">
+  <div class="left-panel">
+    <h3>Resource Cost Per Unit (in Reals)</h3>
+    <ul id="resourceCosts" class="cost-inputs"></ul>
+  </div>
+  <div class="right-panel">
+    <div class="section">
+      <label for="itemSelect">Select item:</label>
+      <select id="itemSelect"></select>
+
+      <label for="quantity">How many to craft:</label>
+      <input type="number" id="quantity" value="1" min="1"/>
+    </div>
+    <div class="section" id="totals"></div>
+    <div class="section" id="details" class="component-list"></div>
+  </div>
+</div>
+
+<script src="items.js"></script>
+<script>
+const itemSelect = document.getElementById('itemSelect');
+const quantityInput = document.getElementById('quantity');
+const detailsDiv = document.getElementById('details');
+const totalsDiv = document.getElementById('totals');
+const resourceCostsDiv = document.getElementById('resourceCosts');
+
+const resourceInputs = {};
+
+function findItem(name) {
+  return items.find(i => i.name === name);
+}
+
+function buildTree(itemName, amount) {
+  const item = findItem(itemName);
+  const li = document.createElement('li');
+  const multiplier = amount / (item?.makes || 1);
+  li.textContent = `${amount} × ${itemName}`;
+  if (!item?.components || item.components.length === 0) return li;
+
+  const ul = document.createElement('ul');
+  item.components.forEach(comp => {
+    const sub = buildTree(comp.item, Math.ceil(comp.quantity * multiplier));
+    ul.appendChild(sub);
+  });
+  li.appendChild(ul);
+  return li;
+}
+
+function getCraftCost(itemName, quantity, cache = {}) {
+  const item = findItem(itemName);
+  if (!item) return 0;
+  if (item.type === "resource") {
+    const unitCost = parseFloat(resourceInputs[itemName]?.value || 0);
+    return unitCost * quantity;
+  }
+
+  const cacheKey = itemName + "_" + quantity;
+  if (cache[cacheKey] !== undefined) return cache[cacheKey];
+
+  const multiplier = quantity / item.makes;
+  let total = 0;
+  for (const comp of item.components || []) {
+    const neededQty = Math.ceil(comp.quantity * multiplier);
+    total += getCraftCost(comp.item, neededQty, cache);
+  }
+  cache[cacheKey] = total;
+  return total;
+}
+
+function populateDropdown() {
+  items.filter(i => i.type === "consumable").forEach(item => {
+    const opt = document.createElement('option');
+    opt.value = item.name;
+    opt.textContent = item.name;
+    itemSelect.appendChild(opt);
+  });
+}
+
+function buildResourceInputs() {
+  resourceCostsDiv.innerHTML = '';
+  const resources = items.filter(i => i.type === "resource");
+  resources.forEach(res => {
+    const li = document.createElement('li');
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.step = '0.1';
+    input.value = '';
+    input.dataset.name = res.name;
+    resourceInputs[res.name] = input;
+    li.innerHTML = `${res.name}: `;
+    li.appendChild(input);
+    resourceCostsDiv.appendChild(li);
+  });
+}
+
+function showDetails(itemName, amount) {
+  const item = findItem(itemName);
+  if (!item) return;
+
+  const treeRoot = buildTree(itemName, amount);
+  const totalCost = getCraftCost(itemName, amount);
+  const totalOutput = amount * (item?.makes || 1);
+
+  totalsDiv.innerHTML = `
+    <h2>${item.name}</h2>
+    <p><strong>Requested Output:</strong> ${totalOutput}</p>
+    <p><strong>Total Estimated Cost:</strong> ${Math.ceil(totalCost)} Reals</p>
+  `;
+
+  const treeHTML = document.createElement('div');
+  treeHTML.classList.add('tree');
+  const treeUL = document.createElement('ul');
+  treeUL.appendChild(treeRoot);
+  treeHTML.appendChild(treeUL);
+
+  detailsDiv.innerHTML = "<h3>Crafting Tree</h3>";
+  detailsDiv.appendChild(treeHTML);
+}
+
+function updateView() {
+  const itemName = itemSelect.value;
+  const amount = parseInt(quantityInput.value, 10) || 1;
+  showDetails(itemName, amount);
+}
+
+itemSelect.addEventListener('change', updateView);
+quantityInput.addEventListener('input', updateView);
+
+populateDropdown();
+buildResourceInputs();
+itemSelect.value = itemSelect.options[0].value;
+updateView();
+</script>
+</body>
+</html>

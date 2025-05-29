@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Naval Forge - Crafting</title>
+  <style>
+    body { background: #111; color: #eee; font-family: Arial, sans-serif; margin: 0; }
+    nav { background:#222; color:#eee; padding:10px; text-align: center; }
+    nav a { color:#eee; margin: 0 15px; text-decoration: none; }
+    .content { max-width: 960px; margin: auto; text-align: center; padding: 40px; }
+    .grid { display: flex; justify-content: center; gap: 30px; margin-top: 30px; flex-wrap: wrap; }
+    .card {
+      background: #222; padding: 30px; border-radius: 10px; flex: 1 1 300px;
+      text-align: center; color: #eee; text-decoration: none;
+      border: 1px solid #444;
+      max-width: 300px;
+    }
+    .card:hover { background: #333; }
+  </style>
+</head>
+<body>
+<nav>
+  <a href="index.html">Home</a>
+  <a href="ships.html">Ship Index</a>
+  <a href="crafting.html">Crafting</a>
+</nav>
+<div class="content">
+  <h1>Crafting</h1>
+  <p>Select the type of crafting tool you'd like to use:</p>
+  <div class="grid">
+    <a class="card" href="consumables-crafting.html">
+      🧪<br/><strong>Consumables Crafting</strong><br/>Potions, Ammo, Repairs
+    </a>
+    <a class="card" href="ship-crafting.html">
+      🛳️<br/><strong>Ship Crafting</strong><br/>Frames, Planks, Hulls (Coming Soon)
+    </a>
+  </div>
+</div>
+</body>
+</html>
