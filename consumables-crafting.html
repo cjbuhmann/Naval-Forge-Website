@@ -2,22 +2,17 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Consumables Crafting Calculator</title>
+  <title>Consumables</title>
   <style>
-    body { background: #111; color: #eee; font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-    nav { background:#222; color:#eee; padding:10px; text-align: center; }
-    nav a { color:#eee; margin: 0 15px; text-decoration: none; }
-    .grid { display: flex; gap: 30px; align-items: flex-start; max-width: 1080px; margin: auto; }
-    .left-panel { width: 35%; }
-    .right-panel { width: 65%; }
-    select, input { width: 100%; padding: 8px; margin-bottom: 15px; background: #222; color: #eee; border: 1px solid #555; }
-    .cost-inputs input { width: 60px; }
-    ul { list-style-type: square; margin-left: 20px; }
-    .tree ul { margin-left: 20px; border-left: 1px dashed #555; padding-left: 10px; }
-    .section { margin-bottom: 20px; }
+    body { background: #111; color: #eee; font-family: Arial; padding: 20px; }
+    nav { background: #222; padding: 10px; text-align: center; }
+    nav a { margin: 0 15px; color: #eee; text-decoration: none; }
+    .grid { display: flex; max-width: 1080px; margin: auto; gap: 40px; }
+    .left { width: 35%; }
+    .right { width: 65%; }
+    label, input, select { display: block; width: 100%; margin: 10px 0; background: #222; color: #eee; border: 1px solid #444; padding: 8px; }
+    ul { padding-left: 20px; }
   </style>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2846961884986929"
-     crossorigin="anonymous"></script>
 </head>
 <body>
 <nav>
@@ -26,75 +21,45 @@
   <a href="crafting.html">Crafting</a>
 </nav>
 
-<h1 style="text-align: center;">Consumables Crafting Calculator</h1>
-<div class="grid">
-  <div class="left-panel">
-    <h3>Resource Cost Per Unit (in Reals)</h3>
-    <ul id="resourceCosts" class="cost-inputs"></ul>
-  </div>
-  <div class="right-panel">
-    <div class="section">
-      <label for="itemSelect">Select item:</label>
-      <select id="itemSelect"></select>
+<script src="items.js"></script>
+<h1 style="text-align:center;">Consumables Crafting Demo</h1>
 
-      <label for="quantity">How many to craft:</label>
-      <input type="number" id="quantity" value="1" min="1"/>
-    </div>
-    <div class="section" id="totals"></div>
-    <div class="section" id="details" class="component-list"></div>
+<!-- AdSense Banner -->
+<div style="text-align:center; margin: 20px 0;">
+  <ins class="adsbygoogle"
+       style="display:block"
+       data-ad-client="ca-pub-XXXXXXXXXXXX"
+       data-ad-slot="1234567890"
+       data-ad-format="auto"
+       data-full-width-responsive="true"></ins>
+  <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+<!-- /AdSense -->
+
+<div class="grid">
+  <div class="left">
+    <h3>Resource Costs (per unit)</h3>
+    <ul id="resourceCosts"></ul>
+  </div>
+  <div class="right">
+    <label for="itemSelect">Select Item</label>
+    <select id="itemSelect"></select>
+
+    <label for="quantity">How many batches:</label>
+    <input type="number" id="quantity" value="1" min="1" />
+
+    <div id="totals"></div>
+    <div id="tree"></div>
   </div>
 </div>
 
-<script src="items.js"></script>
 <script>
 const itemSelect = document.getElementById('itemSelect');
 const quantityInput = document.getElementById('quantity');
-const detailsDiv = document.getElementById('details');
-const totalsDiv = document.getElementById('totals');
-const resourceCostsDiv = document.getElementById('resourceCosts');
-
+const resourceCosts = document.getElementById('resourceCosts');
+const totals = document.getElementById('totals');
+const tree = document.getElementById('tree');
 const resourceInputs = {};
-
-function findItem(name) {
-  return items.find(i => i.name === name);
-}
-
-function buildTree(itemName, amount) {
-  const item = findItem(itemName);
-  const li = document.createElement('li');
-  const multiplier = amount / (item?.makes || 1);
-  li.textContent = `${amount} × ${itemName}`;
-  if (!item?.components || item.components.length === 0) return li;
-
-  const ul = document.createElement('ul');
-  item.components.forEach(comp => {
-    const sub = buildTree(comp.item, Math.ceil(comp.quantity * multiplier));
-    ul.appendChild(sub);
-  });
-  li.appendChild(ul);
-  return li;
-}
-
-function getCraftCost(itemName, quantity, cache = {}) {
-  const item = findItem(itemName);
-  if (!item) return 0;
-  if (item.type === "resource") {
-    const unitCost = parseFloat(resourceInputs[itemName]?.value || 0);
-    return unitCost * quantity;
-  }
-
-  const cacheKey = itemName + "_" + quantity;
-  if (cache[cacheKey] !== undefined) return cache[cacheKey];
-
-  const multiplier = quantity / item.makes;
-  let total = 0;
-  for (const comp of item.components || []) {
-    const neededQty = Math.ceil(comp.quantity * multiplier);
-    total += getCraftCost(comp.item, neededQty, cache);
-  }
-  cache[cacheKey] = total;
-  return total;
-}
 
 function populateDropdown() {
   items.filter(i => i.type === "consumable").forEach(item => {
@@ -105,61 +70,114 @@ function populateDropdown() {
   });
 }
 
-function buildResourceInputs() {
-  resourceCostsDiv.innerHTML = '';
+function setupResourceInputs() {
+  resourceCosts.innerHTML = '';
   const resources = items.filter(i => i.type === "resource");
-  resources.forEach(res => {
+  resources.forEach(r => {
     const li = document.createElement('li');
     const input = document.createElement('input');
     input.type = 'number';
-    input.min = '0';
-    input.step = '0.1';
-    input.value = '';
-    input.dataset.name = res.name;
-    resourceInputs[res.name] = input;
-    li.innerHTML = `${res.name}: `;
+    input.value = r.reals;
+    resourceInputs[r.name] = input;
+    li.textContent = r.name + ": ";
     li.appendChild(input);
-    resourceCostsDiv.appendChild(li);
+    resourceCosts.appendChild(li);
   });
 }
 
-function showDetails(itemName, amount) {
-  const item = findItem(itemName);
-  if (!item) return;
+function findItem(name) {
+  return items.find(i => i.name === name);
+}
 
-  const treeRoot = buildTree(itemName, amount);
-  const totalCost = getCraftCost(itemName, amount);
-  const totalOutput = amount * (item?.makes || 1);
+const categoryTotals = {
+  resource: 0,
+  material: 0,
+  consumable: 0
+};
 
-  totalsDiv.innerHTML = `
-    <h2>${item.name}</h2>
-    <p><strong>Requested Output:</strong> ${totalOutput}</p>
-    <p><strong>Total Estimated Cost:</strong> ${Math.ceil(totalCost)} Reals</p>
+function getCraftCost(name, batches, cache = {}) {
+  const item = findItem(name);
+  if (!item) return 0;
+
+  const cacheKey = name + "_" + batches;
+  if (cache[cacheKey] !== undefined) return cache[cacheKey];
+
+  let total = 0;
+
+  if (item.type === "resource") {
+    const unitCost = parseFloat(resourceInputs[name]?.value || 0);
+    total += unitCost * batches;
+    categoryTotals.resource += unitCost * batches;
+  } else {
+    const realCost = item.reals * batches;
+    categoryTotals[item.type] += realCost;
+    total += realCost;
+
+    item.components.forEach(comp => {
+      const subItem = findItem(comp.item);
+      const subBatches = (comp.quantity * batches) / subItem.makes;
+      total += getCraftCost(comp.item, subBatches, cache);
+    });
+  }
+
+  cache[cacheKey] = total;
+  return total;
+}
+
+function buildTree(name, batches) {
+  const item = findItem(name);
+  const li = document.createElement('li');
+
+  const outputQty = item.makes * batches;
+  li.textContent = `${batches} batch(es) of ${name} → ${outputQty} units`;
+
+  if (!item.components || item.components.length === 0) return li;
+
+  const ul = document.createElement('ul');
+
+  item.components.forEach(c => {
+    const totalCompQty = c.quantity * batches;
+    ul.appendChild(buildTree(c.item, totalCompQty / findItem(c.item).makes));
+  });
+
+  li.appendChild(ul);
+  return li;
+}
+
+function update() {
+  const name = itemSelect.value;
+  const qty = parseInt(quantityInput.value, 10) || 1;
+  categoryTotals.resource = 0;
+  categoryTotals.material = 0;
+  categoryTotals.consumable = 0;
+
+  const cost = getCraftCost(name, qty);
+  const out = findItem(name).makes * qty;
+
+  totals.innerHTML = `
+    <h2>${name}</h2>
+    <p><strong>Output:</strong> ${out}</p>
+    <p><strong>Total Cost:</strong> ${cost.toFixed(2)} Reals</p>
+    <h3>Cost Breakdown</h3>
+    <ul>
+      <li>Final Product (Consumable): ${categoryTotals.consumable.toFixed(2)} Reals</li>
+      <li>Materials: ${categoryTotals.material.toFixed(2)} Reals</li>
+      <li>Resources: ${categoryTotals.resource.toFixed(2)} Reals</li>
+    </ul>
   `;
 
-  const treeHTML = document.createElement('div');
-  treeHTML.classList.add('tree');
-  const treeUL = document.createElement('ul');
-  treeUL.appendChild(treeRoot);
-  treeHTML.appendChild(treeUL);
-
-  detailsDiv.innerHTML = "<h3>Crafting Tree</h3>";
-  detailsDiv.appendChild(treeHTML);
+  tree.innerHTML = "<h3>Crafting Tree</h3>";
+  const ul = document.createElement('ul');
+  ul.appendChild(buildTree(name, qty));
+  tree.appendChild(ul);
 }
 
-function updateView() {
-  const itemName = itemSelect.value;
-  const amount = parseInt(quantityInput.value, 10) || 1;
-  showDetails(itemName, amount);
-}
-
-itemSelect.addEventListener('change', updateView);
-quantityInput.addEventListener('input', updateView);
+itemSelect.addEventListener('change', update);
+quantityInput.addEventListener('input', update);
 
 populateDropdown();
-buildResourceInputs();
-itemSelect.value = itemSelect.options[0].value;
-updateView();
+setupResourceInputs();
+update();
 </script>
 </body>
 </html>
